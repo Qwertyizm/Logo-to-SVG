@@ -1,0 +1,12 @@
+[workspace]
+members = ["runtime","render","gui"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+
+[workspace.dependencies]
+logo-interp = "0.1.0"
+svg = "0.14.0"
+runtime = {path = 'runtime', version = "0.1.0"}
+render= {path = 'render', version = "0.1.0"}
