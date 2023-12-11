@@ -8,18 +8,43 @@ use printer::Printer;
 fn main() {
     let mut prtr=Printer::new(800,800,"image.svg");
     let res=prtr.print(
-    "to square :length
-        repeat 4 [fd :length rt 90]
+        " to draw :repcount
+        make \"colors [\"red \"orange \"yellow \"green \"blue \"violet]
+        repeat 144 [
+            setc item remainder :repcount 6  :colors
+            setlabelheight :repcount
+            pu
+            fd :repcount * :repcount / 30
+            label \"Logo
+            bk :repcount * :repcount / 30
+            pd
+            rt 10
+            make \"repcount 1 + :repcount
+        ]
         end
-        
-        TO randomcolor
-        setcolor pick [ 1 20 15 0 ]
-        end
-    
-        repeat 36 [ randomcolor square random 200 rt 10 ]"
+        window
+        draw 1"
     );
     match res{
         Ok(_)=>(),
         Err(msg)=>println!("{}",msg)
     }
 }
+
+
+
+/* example - include in tests
+" to draw :repcount
+        repeat 144 [
+            setlabelheight :repcount
+            pu
+            fd :repcount * :repcount / 30
+            label \"Logo
+            bk :repcount * :repcount / 30
+            pd
+            rt 10
+            make \"repcount 1 + :repcount
+        ]
+        end
+        draw 1"
+         */

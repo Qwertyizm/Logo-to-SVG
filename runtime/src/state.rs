@@ -7,6 +7,7 @@ use super::common::Pos;
 pub trait Delegate {
     fn clear_graphics(&mut self);
     fn draw_line(&mut self, from: Pos, to: Pos, pen_size: f64, color: LogoColor);
+    fn make_text(&mut self, position: Pos, angle: f64, lebel_height: f64, color: LogoColor, word: String);
     fn show(&mut self, message: &str);
 }
 
@@ -26,10 +27,12 @@ pub struct StateData {
     pub turtle_pos: Pos,
     pub turtle_angle: f64,
     pub turtle_visible: bool,
+    pub turtle_border: bool,
     pub pen_state: PenState,
     pub pen_size: f64,
     pub color: LogoColor,
     pub objects: Vec<Path>,
+    pub labelh: f64,
 }
 
 pub struct State<D: Delegate> {
@@ -46,10 +49,12 @@ impl<D: Delegate> State<D> {
                 turtle_pos: Pos { x: 0f64, y: 0f64 },
                 turtle_angle: 0f64,
                 turtle_visible: true,
+                turtle_border: true,
                 pen_state: PenState::Down,
                 pen_size: 4f64,
                 color: get_color_from_str("black").expect("Don't know black color"),
-                objects: vec![]
+                objects: vec![],
+                labelh: 18f64,
             },
             delegate
         }

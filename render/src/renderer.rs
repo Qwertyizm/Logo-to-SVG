@@ -10,18 +10,14 @@ use runtime::state::{Delegate, State};
 use svg::node::element::Path;
 use svg::node::element::path::Data;
 
+use rusttype::{Point, Font};
+use text_svg::Text;
+
+
 pub struct DrawingDelegate {
     pub path_set: Vec<Path>,
     pub size: Pos,
     pub show_fn: Option<Box<dyn Fn(&str)>>,
-}
-
-impl DrawingDelegate {
-    fn transform_coords(&self, pos: Pos) -> (f32, f32) {
-        let width = self.size.x;
-        let height = self.size.y;
-        ((pos.x + width / 2f64 + 0.5) as f32, (-pos.y + height / 2f64 + 0.5) as f32)
-    }
 }
 
 impl Delegate for DrawingDelegate {
@@ -30,17 +26,31 @@ impl Delegate for DrawingDelegate {
     }
 
     fn draw_line(&mut self, from: Pos, to: Pos, pen_size: f64, color: LogoColor) {
-        let upd_from = self.transform_coords(from);
-        let upd_to = self.transform_coords(to);
         let mut pth=Path::new().set("stroke",color.get_name())
                                      .set("stroke_width",pen_size);
         let mut data=Data::new();
-        data=data.move_to((upd_from.0,upd_from.1)).line_to((upd_to.0,upd_to.1));
+        data=data.move_to((from.x as f32,from.y as f32)).line_to((to.x as f32,to.y as f32));
         pth=pth.set("d",data);
         self.path_set.push(pth);
     } 
+    
+    fn make_text(&mut self, pos: Pos, angle: f64, labelh: f64, color: LogoColor, word: String){
+        let font_data: &[u8] = include_bytes!("impact.ttf");
+        let font: Font<'static> = Font::try_from_bytes(font_data).unwrap();
+        let text=Text::builder()
+                        .size(labelh as f32)
+                        .start(Point { 
+                                x:0.0,
+                                y:0.0
+                                })
+                        .build(&font,word.as_str());
+        let path=text.path
+                                .set("transform",format!("translate({},{}) rotate({})",pos.x,-pos.y,angle-90.0).as_str())
+                                .set("text-anchor", "middle")
+                                .set("fill",color.get_name());
+        self.path_set.push(path);
+    }
 
-    //TODO fix showing text
     fn show(&mut self, message: &str) {
         if let Some(show_fn) = &self.show_fn {
             (show_fn)(message);

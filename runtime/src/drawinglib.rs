@@ -1,6 +1,8 @@
 use logo_interp::core::LogoValue;
 use logo_interp::executor_state::*;
-use super::colors::{colors_count, get_color, get_color_from_str};
+//use crate::state;
+
+use super::colors::get_color_from_str;
 use super::state::{Delegate, PenState, State};
 use super::common::Pos;
 
@@ -9,6 +11,7 @@ pub fn add_drawinglib<D: Delegate + 'static>(es: &mut EState<State<D>>) {
 
     es.functions.insert("cg".to_string(), Function::from_proc(cg));
     es.functions.insert("clean".to_string(), Function::from_proc(clean));
+    es.functions.insert("clearscreen".to_string(), Function::from_proc(clean));
 
     es.functions.insert("pu".to_string(), Function::from_proc(pu));
     es.functions.insert("pd".to_string(), Function::from_proc(pd));
@@ -43,6 +46,11 @@ pub fn add_drawinglib<D: Delegate + 'static>(es: &mut EState<State<D>>) {
     es.functions.insert("setc".to_string(), Function::from_proc1(setc));
     es.functions.insert("setcolor".to_string(), Function::from_proc1(setc));
     es.functions.insert("color".to_string(), Function::from_fn(color));
+
+    es.functions.insert("setlabelheight".to_string(),Function::from_proc1(setlabelh));
+    es.functions.insert("label".to_string(), Function::from_proc1(label));
+
+    es.functions.insert("window".to_string(), Function::from_proc(window));
 }
 
 fn show<D: Delegate>(state: &mut EState<State<D>>, val: LogoValue) -> Result<(), String> {
@@ -170,60 +178,95 @@ fn st<D: Delegate>(state: &mut EState<State<D>>) -> Result<(), String> {
     Ok(())
 }
 
-fn setc<D: Delegate>(state: &mut EState<State<D>>, color: i32) -> Result<(), String> {
-    if color < 0 || color >= colors_count() {
-        return Err(format!("Invalid color number {}", color));
-    }
-    state.state.data.color = get_color(color);
+fn window<D: Delegate>(state: &mut EState<State<D>>)->Result<(),String>{
+    state.state.data.turtle_border=false;
     Ok(())
+}
+
+fn setc<D: Delegate>(state: &mut EState<State<D>>, color: String) -> Result<(), String> {
+    let col = get_color_from_str(color.as_str());
+    match col{
+        Ok(c) => {
+            state.state.data.color=c;
+            Ok(())
+        },
+        Err(msg) => Err(msg)
+    }
 }
 
 fn color<D: Delegate>(state: &mut EState<State<D>>) -> Result<String, String> {
     Ok(state.state.data.color.get_name())
 }
 
+fn setlabelh<D: Delegate>(state: &mut EState<State<D>>, h: f64)->Result<(),String>{
+    if h>0.0{
+        state.state.data.labelh=h;
+        return Ok(());
+    }
+    Err(format!("Incorrect label height value: {}",h))
+}
+
+fn label<D: Delegate>(state: &mut EState<State<D>>, word: String)->Result<(),String>{
+    make_text(&mut state.state, word);
+    Ok(())
+}
+
+fn make_text<D:Delegate>(state: &mut State<D>, word: String){
+    let color = state.data.color.clone();
+    let height = state.data.labelh;
+    let angle = state.data.turtle_angle;
+    let pos = state.data.turtle_pos;
+    state.delegate.make_text(pos,angle, height, color,word);
+}
+
 fn move_turtle<D: Delegate>(state: &mut State<D>, pos: Pos) {
     let old_pos = state.data.turtle_pos;
-    let w2 = state.data.canvas_width as f64 / 2f64;
-    let h2 = state.data.canvas_height as f64 / 2f64;
-    if pos.y > old_pos.y + f64::EPSILON {
-        let xp = intersect_horizontal(old_pos, pos, h2, -w2, w2);
-        if let Some(xpos)=xp {
-            draw_line(state, old_pos, Pos{x: xpos, y: h2});
-            state.data.turtle_pos = Pos{x: xpos, y: -h2};
-            move_turtle(state, Pos{x: pos.x, y: pos.y - state.data.canvas_height as f64});
-            return;
+    if state.data.turtle_border{
+        let w2 = state.data.canvas_width as f64 / 2f64;
+        let h2 = state.data.canvas_height as f64 / 2f64;
+        if pos.y > old_pos.y + f64::EPSILON {
+            let xp = intersect_horizontal(old_pos, pos, h2, -w2, w2);
+            if let Some(xpos)=xp {
+                draw_line(state, old_pos, Pos{x: xpos, y: h2});
+                state.data.turtle_pos = Pos{x: xpos, y: -h2};
+                move_turtle(state, Pos{x: pos.x, y: pos.y - state.data.canvas_height as f64});
+                return;
+            }
         }
-    }
-    if pos.y + f64::EPSILON < old_pos.y {
-        let xp = intersect_horizontal(old_pos, pos, -h2, -w2, w2);
-        if let Some(xpos)=xp {
-            draw_line(state, old_pos, Pos{x: xpos, y: -h2});
-            state.data.turtle_pos = Pos{x: xpos, y: h2};
-            move_turtle(state, Pos{x: pos.x, y: pos.y + state.data.canvas_height as f64});
-            return;
+        if pos.y + f64::EPSILON < old_pos.y {
+            let xp = intersect_horizontal(old_pos, pos, -h2, -w2, w2);
+            if let Some(xpos)=xp {
+                draw_line(state, old_pos, Pos{x: xpos, y: -h2});
+                state.data.turtle_pos = Pos{x: xpos, y: h2};
+                move_turtle(state, Pos{x: pos.x, y: pos.y + state.data.canvas_height as f64});
+                return;
+            }
         }
-    }
-    if pos.x > old_pos.x + f64::EPSILON {
-        let yp = intersect_vertical(old_pos, pos, w2, -h2, h2);
-        if let Some(ypos)=yp {
-            draw_line(state, old_pos, Pos{x: w2, y: ypos});
-            state.data.turtle_pos = Pos{x: -w2, y: ypos};
-            move_turtle(state, Pos{x: pos.x - state.data.canvas_width as f64, y: pos.y});
-            return;
+        if pos.x > old_pos.x + f64::EPSILON {
+            let yp = intersect_vertical(old_pos, pos, w2, -h2, h2);
+            if let Some(ypos)=yp {
+                draw_line(state, old_pos, Pos{x: w2, y: ypos});
+                state.data.turtle_pos = Pos{x: -w2, y: ypos};
+                move_turtle(state, Pos{x: pos.x - state.data.canvas_width as f64, y: pos.y});
+                return;
+            }
         }
-    }
-    if pos.x + f64::EPSILON < old_pos.x {
-        let yp = intersect_vertical(old_pos, pos, -w2, -h2, h2);
-        if let Some(ypos)=yp {
-            draw_line(state, old_pos, Pos{x: -w2, y: ypos});
-            state.data.turtle_pos = Pos{x: w2, y: ypos};
-            move_turtle(state, Pos{x: pos.x + state.data.canvas_width as f64, y: pos.y});
-            return;
+        if pos.x + f64::EPSILON < old_pos.x {
+            let yp = intersect_vertical(old_pos, pos, -w2, -h2, h2);
+            if let Some(ypos)=yp {
+                draw_line(state, old_pos, Pos{x: -w2, y: ypos});
+                state.data.turtle_pos = Pos{x: w2, y: ypos};
+                move_turtle(state, Pos{x: pos.x + state.data.canvas_width as f64, y: pos.y});
+                return;
+            }
         }
+        state.data.turtle_pos = pos;
+        draw_line(state, old_pos, pos);
     }
-    state.data.turtle_pos = pos;
-    draw_line(state, old_pos, pos);
+    else{
+        state.data.turtle_pos = pos;
+        draw_line(state, old_pos, pos);
+    }
 }
 
 fn draw_line<D: Delegate>(state: &mut State<D>, p1: Pos, p2: Pos) {

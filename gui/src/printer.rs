@@ -17,12 +17,15 @@ impl Default for Printer{
 }
 
 impl Printer{
-    pub fn new(width:i32,heigth:i32,img_path:&str)->Self{
-        Self { context: Context::new(width,heigth), img_path: img_path.to_string() }
+    pub fn new(width:i32,height:i32,img_path:&str)->Self{
+        Self { context: Context::new(width,height), img_path: img_path.to_string() }
     }
 
-    fn to_file(&self,nicely_done: Vec<Path>){
-        let mut document= Document::new();
+    fn to_file(&self,width:i32,height:i32,nicely_done: Vec<Path>){
+        let mut document= Document::new()
+            .set("height",height)
+            .set("width",width)
+            .set("viewBox",format!("-{},-{},{},{}",width/2,height/2,width,height));
         for path in nicely_done{
             document=document.add(path);
         }
@@ -39,14 +42,9 @@ impl Printer{
 
     pub fn print(&mut self,cmd:&str)->Result<(),String>{
         let (proc_source,cmd_source)=Self::parse(cmd);
-        if let Ok(image)=self.context.render(proc_source.as_str(), cmd_source.as_str()){
-            self.to_file(image);
-            Ok(())
-        }
-        else{
-            Err("Błąd podczas renderowania obrazu".to_string())
-        }
-        
+        let image=self.context.render(proc_source.as_str(), cmd_source.as_str())?;
+        self.to_file(self.context.state.state.data.canvas_width,self.context.state.state.data.canvas_height,image);
+        Ok(())
 
     }
 }

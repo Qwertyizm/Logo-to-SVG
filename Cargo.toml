@@ -1,5 +1,6 @@
 [workspace]
 members = ["runtime","render","gui"]
+exclude = ["text-svg"]
 resolver = "2"
 
 [workspace.package]

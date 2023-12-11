@@ -9,4 +9,6 @@ edition = "2021"
 logo-interp = "0.1.0"
 svg = "0.14.0"
 runtime = {  workspace = true }
+text-svg = { path = "../text-svg" }
+rusttype = "0.9.3"
 
