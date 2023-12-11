@@ -29,7 +29,7 @@ impl Delegate for DrawingDelegate {
         let mut pth=Path::new().set("stroke",color.get_name())
                                      .set("stroke_width",pen_size);
         let mut data=Data::new();
-        data=data.move_to((from.x as f32,from.y as f32)).line_to((to.x as f32,to.y as f32));
+        data=data.move_to((from.x as f32,-from.y as f32)).line_to((to.x as f32,-to.y as f32));
         pth=pth.set("d",data);
         self.path_set.push(pth);
     } 
